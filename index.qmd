@@ -215,6 +215,7 @@ NNet <- nn_module(
         self$sigmoid <- nn_sigmoid()
     },
     forward = function(x){
+      x %>%
         self$hidden1() %>%
         self$activation() %>%
         self$hidden2()
@@ -237,13 +238,16 @@ M2 <- model.matrix(median_house_value ~ 0 + . -households, data = df_test)
 nnet_fit <- NNet %>% 
   setup(
     loss = nn_mse_loss(),
-    optimizer = optim_adam, 
+    optimizer = optim_adam,
+    metrics = list(
+      luz_metric_binary_accuracy()
+    )
   ) %>%
   set_hparams(
-    p=ncol(M), q1=32, q2=16, q3=8
+    p = ncol(M), q1 = 32, q2 = 16, q3 = 8
   ) %>%
   set_opt_hparams(
-    lr=0.005
+    lr = 0.01
   ) %>%
   fit(
     data = list(
@@ -265,7 +269,7 @@ nnet_fit <- NNet %>%
 Plot the results of the training and validation loss and accuracy.
 
 ```R
-... # Insert your code here
+plot(fit_nn)
 ```
 
 
@@ -445,6 +449,7 @@ NNet <- nn_module(
         self$sigmoid <- nn_sigmoid()
     },
     forward = function(x){
+      x %>%
         self$hidden1() %>%
         self$activation() %>%
         self$hidden2()
@@ -486,8 +491,6 @@ nnet_fit <- NNet %>%
     epochs = 50,
     dataloader_options = list(num_workers = 0),
     verbose = TRUE # Change to TRUE while tuning. But, set to FALSE before submitting
-
-
   )
 ```
 
@@ -573,9 +576,9 @@ plot(
 
 Define a grid of $100$ points from $-10$ to $10$ in both $x_1$ and $x_2$ using the `expand.grid()`. Save it as a tibble called `df_test`. 
 
-```R
-grid <- ... # Insert your code here
-df_test <- ... # Insert your code here
+```{R}
+grid <- expand.grid(x1 = seq(-10, 10, length.out = 100), x2 = seq(-10, 10, length.out = 100))
+df_test <- tibble(grid)
 ```
 
 ---
@@ -584,14 +587,14 @@ df_test <- ... # Insert your code here
 
 Fit a classification tree model to predict the `y` variable using the `x1` and `x2` predictors, and plot the decision boundary. 
 
-```R
-rpart_fit <- ... # Insert your code here
-rpart_classes <- ... # Insert your code here
+```{R}
+rpart_fit <- rpart(y ~ df$x1 + df$x2, data = df)
+rpart_classes <- predict(rpart_fit, df$y)
 ```
 
 Plot the decision boundary using the following function:
 
-```R
+```{R}
 plot_decision_boundary <- function(predictions){
   plot(
     df_test$x1, df_test$x2, 
@@ -606,7 +609,7 @@ plot_decision_boundary <- function(predictions){
 }
 ```
 
-```R
+```{R}
 plot_decision_boundary(rpart_classes)
 ```
 
@@ -646,9 +649,9 @@ Fit a neural network with **1 hidden layer** to predict the `y` variable using t
 ```R
 NN1 <- nn_module(
   initialize = function(p, q1, o){
-    self$hidden1 <- ... # Insert your code here
-    self$output <- ... # Insert your code here
-    self$activation <- ... # Insert your code here
+    self$hidden1 <- nn_linear(p, q1)
+    self$output <- nn_linear(q1, o)
+    self$activation <- nn_relu()
   },
   forward = function(x){
     x %>% 
@@ -689,7 +692,11 @@ fit_1_predictions <- predict(fit_1, test_matrix) %>%
   as.integer()
 ```
 
-Plot the results using the `plot_decision_boundary()` function.
+Plot the results using the `plot_decision_boundary()` function
+
+```r
+plot_decision_boundary(fit_1_predictions)
+```
 
 ---
 
@@ -700,11 +707,11 @@ Fit a neural network with **0 hidden layers** to predict the `y` variable using 
 ```R
 NN0 <- nn_module(
   initialize = function(p, o){
-    ... # Insert your code here
+    self$l <- nn_linear(p,o)
   },
   forward = function(x){
     x %>% 
-    ... # Insert your code here
+      self$l()
   }
 )
 
@@ -717,6 +724,10 @@ fit_0 <- NN0 %>%
 
 Plot the results using the `plot_decision_boundary()` function.
 
+```r
+plot_decision_boundary(fit_0)
+```
+
 ---
 
 
@@ -727,11 +738,18 @@ Fit a neural network with **3 hidden layers** to predict the `y` variable using 
 ```R
 NN2 <- nn_module(
   initialize = function(p, q1, q2, o){
-    ... # Insert your code here
+    self$hidden1 <- nn_linear(p, q1)
+    self$hidden2 <- nn_linear(q1, q2)
+    self$hidden3 <- nn_linear(q2, o)
+    self$activation <- nn_relu()
   },
   forward = function(x){
     x %>% 
-    ... # Insert your code here
+      self$hidden1() %>%
+      self$activation() %>%
+      self$hidden2() %>%
+      self$activation() %>%
+      self$hidden3() 
   }
 )
 
@@ -743,6 +761,11 @@ fit_2 <- NN3 %>%
 ```
 
 Plot the results using the `plot_decision_boundary()` function.
+
+```r
+plot_decision_boundary(fit_2)
+```
+
 
 ---
 
