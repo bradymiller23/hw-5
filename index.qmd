@@ -581,8 +581,9 @@ plot(
 Define a grid of $100$ points from $-10$ to $10$ in both $x_1$ and $x_2$ using the `expand.grid()`. Save it as a tibble called `df_test`. 
 
 ```{R}
-grid <- expand.grid(x1 = seq(-10, 10, length.out = 100), x2 = seq(-10, 10, length.out = 100))
+grid <- expand.grid(x1 = seq(-10, 10, length.out = 10), x2 = seq(-10, 10, length.out = 10))
 df_test <- tibble(grid)
+df_test
 ```
 
 ---
@@ -623,9 +624,9 @@ plot_decision_boundary(rpart_classes)
 
 Fit a support vector machine model to predict the `y` variable using the `x1` and `x2` predictors. Use the `svm()` function and use any kernel of your choice. Remember to set the `type` argument to `"C-classification"` **if you haven't** converted `y` to be of type `factor`.
 
-```R
-svm_fit <- ... # Insert your code here
-svm_classes <- ... # Insert your code here
+```{R}
+svm_fit <- svm(y ~ x1 + x2 , data = df, type = 'C-classification')
+svm_classes <- predict(svm_fit, newdata = df_test) 
 plot_decision_boundary(svm_classes)
 ```
 
@@ -650,7 +651,7 @@ You can use any optimizer of your choice, but you **will need to tune the learni
 
 Fit a neural network with **1 hidden layer** to predict the `y` variable using the `x1` and `x2` predictors.
 
-```R
+```{R}
 NN1 <- nn_module(
   initialize = function(p, q1, o){
     self$hidden1 <- nn_linear(p, q1)
@@ -667,21 +668,22 @@ NN1 <- nn_module(
 
 fit_1 <- NN1 %>% 
   setup(
-    ... # Insert your code here
+    loss = nn_mse_loss(),
+    optimizer = optim_adam
   ) %>%
   set_hparams(
-    ... # Insert your code here
+   p = ncol(df), q1 = 10, o =3
   ) %>%
-  set_opt_params(
-    ... # Insert your code here
+  set_opt_hparams(
+    lr = 0.005
   ) %>%
   fit(
     data = list(
       df %>% select(x1, x2) %>% as.matrix,
       df$y %>% as.integer
     ),
-    ... # Insert your code here
-    dataloader_options = ... # Insert your code here
+    epochs = 50,
+    dataloader_options = list(num_workers = 0),
     verbose = FALSE
   )
 ```
