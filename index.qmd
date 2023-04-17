@@ -239,17 +239,17 @@ M <- model.matrix(median_house_value ~ 0 + . -households, data = df_train)
 
 nnet_fit <- NNet %>% 
   setup(
-    loss = nn_bce_loss(),
+    loss = nn_mse_loss(),
     optimizer = optim_adam,
     metrics = list(
-      luz_metric_binary_accuracy()
+      luz_metric_mse()
     )
   ) %>%
   set_hparams(
     p = ncol(M), q1 = 32, q2 = 16, q3 = 8
   ) %>%
   set_opt_hparams(
-    lr = 0.1
+    lr = 1e-2
   ) %>%
   fit(
     data = list(
@@ -260,8 +260,8 @@ nnet_fit <- NNet %>%
             model.matrix(median_house_value ~ 0 + . -households, data = df_test),
             df_test %>% select(median_house_value) %>% as.matrix
         ),
-    epochs = 50,
-    dataloader_options = list(batch_size = 324, shuffle = TRUE),
+    epochs = 100,
+    dataloader_options = list(batch_size = 2000, shuffle = TRUE),
     verbose = TRUE # Change to TRUE while tuning. But, set to FALSE before submitting
   )
 ```
@@ -269,7 +269,7 @@ nnet_fit <- NNet %>%
 Plot the results of the training and validation loss and accuracy.
 
 ```{R}
-plot(fit_nn)
+plot(nnet_fit)
 ```
 
 
@@ -277,8 +277,9 @@ Report the root mean squared error on the test set.
 
 
 ```{R}
-nnet_predictions <- rmse(df_test$median_house_value, 
-                         as.array(predict(nn_fit, newdata = df_test)))
+nnet_predictions <- predict(nnet_fit, model.matrix(median_house_value ~ 0 + . -households, data = df_test)) %>% as.array()
+
+nn_RMSE <- rmse(df_test$median_house_value, nnet_predictions)
 ```
 
 ::: {.callout-warning}
@@ -294,7 +295,7 @@ Summarize your results in a table comparing the RMSE for the different models. W
 ```{R}
 summary_table <- data.frame(
   Model = c('Linear Regression', 'Decision Tree', 'SVM', 'Neural Network'),
-  RMSE = c(lm_RMSE, rpart_RMSE, svm_RMSE, nnet_predictions)
+  RMSE = c(lm_RMSE, rpart_RMSE, svm_RMSE, nn_RMSE)
 )
 summary_table
 ```
