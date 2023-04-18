@@ -609,7 +609,7 @@ df3_test <- tibble(grid)
 Fit a classification tree model to predict the `y` variable using the `x1` and `x2` predictors, and plot the decision boundary. 
 
 ```{R}
-rpart_fit <- rpart(y ~ df3$x1 + df3$x2, data = df3)
+rpart_fit <- rpart(y ~ x1 + x2, data = df3, method = 'class')
 rpart_classes <- predict(rpart_fit, df3_test, type = 'class')
 ```
 
@@ -641,8 +641,8 @@ plot_decision_boundary(rpart_classes)
 Fit a support vector machine model to predict the `y` variable using the `x1` and `x2` predictors. Use the `svm()` function and use any kernel of your choice. Remember to set the `type` argument to `"C-classification"` **if you haven't** converted `y` to be of type `factor`.
 
 ```{R}
-svm_fit <- svm(y ~ df3$x1 + df3$x2 , data = df3, type = 'C-classification', kernel = 'radial')
-svm_classes <- predict(svm_fit, newdata = df3)
+svm_fit <- svm(y ~ x1 + x2 , data = df3, type = 'C-classification', kernel = 'radial', method = 'class')
+svm_classes <- predict(svm_fit, newdata = df3_test, type = 'class')
 plot_decision_boundary(svm_classes)
 ```
 
@@ -688,7 +688,7 @@ fit_1 <- NN1 %>%
     optimizer = optim_adam
   ) %>%
   set_hparams(
-   p = ncol(df3), q1 = 10, o = 3
+   p = ncol(df3_test), q1 = 10, o = 3
   ) %>%
   set_opt_hparams(
     lr = 0.001
@@ -710,7 +710,7 @@ In order to generate the class predictions, you will need to use the `predict()`
 test_matrix <- df3_test %>% select(x1, x2) %>% as.matrix
 
 fit_1_predictions <- predict(fit_1, test_matrix) %>% 
-  argmax(2) %>% 
+  torch_argmax(2) %>% 
   as.integer()
 ```
 
@@ -738,10 +738,21 @@ NN0 <- nn_module(
 )
 
 fit_0 <- NN0 %>% 
-  setup(...) %>%
-  set_hparams(...) %>%
-  set_opt_params(...) %>%
-  fit(...)
+  setup(
+    loss = nn_cross_entropy_loss(),
+    optimizer = optim_adam
+  ) %>%
+  set_hparams(p = ncol(df3_test), o = 3) %>%
+  set_opt_hparams(lr=0.001) %>%
+  fit(
+    data = list(
+      df3 %>% select(x1, x2) %>% as.matrix,
+      df3$y %>% as.integer
+    ),
+    epochs = 50,
+    dataloader_options = list(batch_size = 200, shuffle = TRUE),
+    verbose = FALSE
+  )
 ```
 
 Plot the results using the `plot_decision_boundary()` function.
