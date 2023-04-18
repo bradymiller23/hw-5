@@ -599,7 +599,7 @@ Define a grid of $100$ points from $-10$ to $10$ in both $x_1$ and $x_2$ using t
 
 ```{R}
 grid <- expand.grid(x1=seq(-10,10,length.out=100), x2=seq(-10,10,length.out=100))
-df3_test <- tibble(grid)
+df3_test <- as_tibble(grid)
 ```
 
 ---
