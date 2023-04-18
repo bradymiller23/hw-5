@@ -215,7 +215,6 @@ NNet <- nn_module(
         self$hidden3 <- nn_linear(q2, q3)
         self$output <- nn_linear(q3,1)
         self$activation <- nn_relu()
-        self$sigmoid <- nn_sigmoid()
     },
     forward = function(x){
       x %>%
@@ -276,20 +275,25 @@ Report the root mean squared error on the test set.
 
 
 ```{R}
-nnet_predictions <- predict(nnet_fit, model.matrix(median_house_value ~ 0 + . -households, data = df_test)) %>% as.array()
+nnet_predictions <- predict(nnet_fit, 
+                            model.matrix(median_house_value ~ 0 + . -households,
+                                         data = df_test)) %>% as.array()
 
 nn_RMSE <- rmse(df_test$median_house_value, nnet_predictions)
+nn_RMSE
 ```
 
 ::: {.callout-warning}
-Remember to use the `as_array()` function to convert the predictions to a vector of numbers before computing the RMSE with `rmse()`
+Remember to use the `as_array()` function to convert the predictions to a vector
+of numbers before computing the RMSE with `rmse()`
 :::
 
 ---
 
 ###### 1.9 (5 points)
 
-Summarize your results in a table comparing the RMSE for the different models. Which model performed best? Why do you think that is?
+Summarize your results in a table comparing the RMSE for the different models. 
+Which model performed best? Why do you think that is?
 
 ```{R}
 summary_table <- data.frame(
@@ -299,6 +303,10 @@ summary_table <- data.frame(
 summary_table
 ```
 
+The model that performed best was the svm model. I believe this is because the
+data is non-linear so a good model would require the fit of the model to be able
+to 'flow' with tendencies of the data. SVM is good for handling non-linear data
+through the different kernels that can be used for the svm model.
 
 
 <br><br><br><br>
@@ -485,18 +493,23 @@ nnet_fit <- NNet %>%
      lr = 1e-2
   ) %>%
   fit(
-    data = list(
-            M3,
-            (df2_train %>% select(spam) %>% as.numeric() - 1)
+data = list(
+            model.matrix(spam ~ 0 + ., data = df2_train),
+            (df2_train[["spam"]] %>% as.numeric() - 1) %>% as.matrix()
         ),
         valid_data = list(
-            M4,
-            df2_test %>% select(spam) %>% as.numeric() - 1
+            model.matrix(spam ~ 0 + ., data = df2_test),
+            (df2_test[["spam"]] %>% as.numeric() - 1) %>% as.matrix()
         ),
     epochs = 100,
     dataloader_options = list(batch_size = 512, shuffle = TRUE),
     verbose = TRUE # Change to TRUE while tuning. But, set to FALSE before submitting
   )
+
+
+nnet_predictions <- ifelse(predict(nnet_fit, 
+                       model.matrix(spam ~ 0 + ., data = df2_test)) > 0.5, 1, 0)
+
 ```
 
 ---
@@ -506,7 +519,7 @@ nnet_fit <- NNet %>%
 Summarize your results in a table comparing the accuracy metrics for the different models. 
 
 ```{R}
-list(glm_classes, rpart_classes, svm_classes#, nn_fit) %>%
+list(glm_classes, rpart_classes, svm_classes, nnet_predictions) %>%
     lapply(\(x) overview(x, df2_test$spam)) %>%
     bind_rows() %>%
   cbind(Model = c('Logistic Regression', 'Decision Tree', 'SVM', 'Neural Network')) %>%
@@ -515,6 +528,7 @@ list(glm_classes, rpart_classes, svm_classes#, nn_fit) %>%
 
 If you were to choose a model to classify spam emails, which model would you choose? Think about the context of the problem and the cost of false positives and false negatives.
 
+In terms of classifying spam emails, false positives would be incorrectly classifying a real/non-spam email as spam, while false negatives would be when the computer doesn't recognize an email as spam, and instead classifies it as legitimate. This can lead to someone accidentally opening contents within the misclassified, actual spam email, causing phishing or malware attacks or other threats against their privacy and security. Based on this, the model I would choose to classify spam emails would be the neural network model. False negative rate is obviously the most threatening thing for a email user, so we want to prioritize that rate. True positive rate is calculated by dividing the true positive rate by the sum of the true positives and false negatives. So to get the false negative rate you can just do 1 - true positive rate. Doing this, you can see that the neural network would have the lowest false negative rate. While it doesn't have the best accuracy and error of the models, its close to the top performers in those categories and it has the best true positive rate, so it is best at correctly identifying spam. Thus, the neural network model would be the best for identifying spam.
 
 
 <br><br><br><br>
@@ -674,10 +688,10 @@ fit_1 <- NN1 %>%
     optimizer = optim_adam
   ) %>%
   set_hparams(
-   p = ncol(df3), q1 = 10, o =3
+   p = ncol(df3), q1 = 10, o = 3
   ) %>%
   set_opt_hparams(
-    lr = 0.005
+    lr = 1e-2
   ) %>%
   fit(
     data = list(
@@ -685,7 +699,7 @@ fit_1 <- NN1 %>%
       df3$y %>% as.integer
     ),
     epochs = 50,
-    dataloader_options = list(num_workers = 0),
+    dataloader_options = list(batch_size = 200, shuffle = TRUE),
     verbose = FALSE
   )
 ```
