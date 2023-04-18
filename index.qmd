@@ -598,7 +598,7 @@ plot(
 Define a grid of $100$ points from $-10$ to $10$ in both $x_1$ and $x_2$ using the `expand.grid()`. Save it as a tibble called `df_test`. 
 
 ```{R}
-grid <- expand.grid(x1 = seq(-10, 10, length.out = 10), x2 = seq(-10, 10, length.out = 10))
+grid <- expand.grid(x1=seq(-10,10,length.out=100), x2=seq(-10,10,length.out=100))
 df3_test <- tibble(grid)
 ```
 
@@ -610,7 +610,7 @@ Fit a classification tree model to predict the `y` variable using the `x1` and `
 
 ```{R}
 rpart_fit <- rpart(y ~ df3$x1 + df3$x2, data = df3)
-rpart_classes <- predict(rpart_fit, df3$y)
+rpart_classes <- predict(rpart_fit, df3_test, type = 'class')
 ```
 
 Plot the decision boundary using the following function:
@@ -641,8 +641,8 @@ plot_decision_boundary(rpart_classes)
 Fit a support vector machine model to predict the `y` variable using the `x1` and `x2` predictors. Use the `svm()` function and use any kernel of your choice. Remember to set the `type` argument to `"C-classification"` **if you haven't** converted `y` to be of type `factor`.
 
 ```{R}
-svm_fit <- svm(y ~ df3$x1 + df3$x2 , data = df3, type = 'C-classification')
-svm_classes <- predict(svm_fit, newdata = df3_test) 
+svm_fit <- svm(y ~ df3$x1 + df3$x2 , data = df3, type = 'C-classification', kernel = 'radial')
+svm_classes <- predict(svm_fit, newdata = df3)
 plot_decision_boundary(svm_classes)
 ```
 
@@ -684,14 +684,14 @@ NN1 <- nn_module(
 
 fit_1 <- NN1 %>% 
   setup(
-    loss = nn_mse_loss(),
+    loss = nn_cross_entropy_loss(),
     optimizer = optim_adam
   ) %>%
   set_hparams(
    p = ncol(df3), q1 = 10, o = 3
   ) %>%
   set_opt_hparams(
-    lr = 1e-2
+    lr = 0.001
   ) %>%
   fit(
     data = list(
