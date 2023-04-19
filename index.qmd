@@ -247,7 +247,7 @@ nnet_fit <- NNet %>%
     p = ncol(M), q1 = 32, q2 = 16, q3 = 8
   ) %>%
   set_opt_hparams(
-    lr = 1e-2
+    lr = 0.001
   ) %>%
   fit(
     data = list(
@@ -306,7 +306,7 @@ summary_table
 The model that performed best was the svm model. I believe this is because the
 data is non-linear so a good model would require the fit of the model to be able
 to 'flow' with tendencies of the data. SVM is good for handling non-linear data
-through the different kernels that can be used for the svm model.
+through the different kernels that can be used for its model. 
 
 
 <br><br><br><br>
@@ -490,7 +490,7 @@ nnet_fit <- NNet %>%
     p = ncol(M3), q1 = 32, q2 = 16, q3 = 8
   ) %>%
   set_opt_hparams(
-     lr = 1e-2
+     lr = 0.001
   ) %>%
   fit(
 data = list(
@@ -509,7 +509,6 @@ data = list(
 
 nnet_predictions <- ifelse(predict(nnet_fit, 
                        model.matrix(spam ~ 0 + ., data = df2_test)) > 0.5, 1, 0)
-
 ```
 
 ---
@@ -699,7 +698,7 @@ fit_1 <- NN1 %>%
       df3$y %>% as.integer
     ),
     epochs = 50,
-    dataloader_options = list(batch_size = 200, shuffle = TRUE),
+    dataloader_options = list(batch_size = 100, shuffle = TRUE),
     verbose = FALSE
   )
 ```
@@ -747,18 +746,25 @@ fit_0 <- NN0 %>%
   fit(
     data = list(
       df3 %>% select(x1, x2) %>% as.matrix,
-      df3$y %>% as.integer
+      df3$y 
     ),
     epochs = 50,
-    dataloader_options = list(batch_size = 200, shuffle = TRUE),
+    dataloader_options = list(batch_size = 100, shuffle = TRUE),
     verbose = FALSE
   )
+
+
+test_matrix <- df3_test %>% select(x1, x2) %>% as.matrix
+
+fit_0_predictions <- predict(fit_0, test_matrix) %>% 
+  torch_argmax(2) %>% 
+  as.integer()
 ```
 
 Plot the results using the `plot_decision_boundary()` function.
 
 ```{r}
-plot_decision_boundary(fit_0)
+plot_decision_boundary(fit_0_predictions)
 ```
 
 ---
@@ -769,7 +775,7 @@ plot_decision_boundary(fit_0)
 Fit a neural network with **3 hidden layers** to predict the `y` variable using the `x1` and `x2` predictors.
 
 ```{r}
-NN2 <- nn_module(
+NN3 <- nn_module(
   initialize = function(p, q1, q2, o){
     self$hidden1 <- nn_linear(p, q1)
     self$hidden2 <- nn_linear(q1, q2)
@@ -787,16 +793,33 @@ NN2 <- nn_module(
 )
 
 fit_2 <- NN3 %>% 
-  setup(...) %>%
-  set_hparams(...) %>%
-  set_opt_params(...) %>%
-  fit(...)
+  setup(
+    loss = nn_cross_entropy_loss(),
+    optimizer = optim_adam
+    ) %>%
+  set_hparams(p = ncol(df3_test), q1 = 10, q2 = 10, o = 3) %>%
+  set_opt_hparams(lr = 0.001) %>%
+  fit(
+    data = list(
+      df3 %>% select(x1, x2) %>% as.matrix,
+      df3$y 
+    ),
+    epochs = 50,
+    dataloader_options = list(batch_size = 100, shuffle = TRUE),
+    verbose = FALSE
+  )
+
+test_matrix <- df3_test %>% select(x1, x2) %>% as.matrix
+
+fit_2_predictions <- predict(fit_2, test_matrix) %>% 
+  torch_argmax(2) %>% 
+  as.integer()
 ```
 
 Plot the results using the `plot_decision_boundary()` function.
 
 ```{r}
-plot_decision_boundary(fit_2)
+plot_decision_boundary(fit_2_predictions)
 ```
 
 
@@ -806,6 +829,25 @@ plot_decision_boundary(fit_2)
 
 What are the differences between the models? How do the decision boundaries change as the number of hidden layers increases?
 
+The difference between the models is how well each one classifies the points 
+of each colored spiral away, especially towards the outer parts of the image. As
+the number of hidden layers increases, the decision boundary gets more precise
+and is better at classifying the points of the spirals. For example, in the 
+neural network with 0 hidden layers it breaks the image up into 3 distinct 
+sections, divided by straight lines. This doesn't match the tendency or curve 
+of the data, and does a very poor job classifying the points. While each section 
+may contain may points of the correct color, it also incorrectly classifies many
+points of the other 2 colors. In the neural network with one hidden layer,
+the classification of the points could still be considered poor, but is better 
+than the neural network with 0 hidden layers. This neural network also has those 
+3 sections that it divides most of then image into but at the center, where the 
+spirals converge, it starts to create little sections of individual colors that 
+do a better job at classifying those points near the center. Finally, for the 
+neural network with 3 hidden layers, this one does a great job at establishing
+the decision boundary as it follows the flow of each spiral all the way from the
+center to the end of each one. While there are still a few misclassifications, 
+the amount it has could be considered acceptable as its a very small amount and 
+you wouldn't want to necessarily add more as it may lead to overfitting.
 
 ---
 
